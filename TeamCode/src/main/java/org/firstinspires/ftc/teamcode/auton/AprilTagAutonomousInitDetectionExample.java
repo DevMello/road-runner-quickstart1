@@ -1,26 +1,21 @@
-package org.firstinspires.ftc.teamcode.drive.opmode;
+package org.firstinspires.ftc.teamcode.auton;
 
-import com.acmerobotics.roadrunner.geometry.Pose2d;
-import com.acmerobotics.roadrunner.geometry.Vector2d;
-import com.acmerobotics.roadrunner.trajectory.Trajectory;
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import android.annotation.SuppressLint;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
-import org.firstinspires.ftc.teamcode.vision.AprilTagDetectionPipeline;
 import org.openftc.apriltag.AprilTagDetection;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
+import org.openftc.easyopencv.OpenCvInternalCamera;
 
 import java.util.ArrayList;
 
-/*
- * This is an example of a more complex path to really test the tuning.
- */
-@Autonomous(group = "drive")
-public class SplineTest extends LinearOpMode {
+@TeleOp
+public class AprilTagAutonomousInitDetectionExample extends LinearOpMode
+{
     OpenCvCamera camera;
     AprilTagDetectionPipeline aprilTagDetectionPipeline;
 
@@ -38,7 +33,7 @@ public class SplineTest extends LinearOpMode {
     // UNITS ARE METERS
     double tagsize = 0.166;
 
-    // Tag ID 1, 2, 3 from the 36h11 family
+    // Tag ID 1,2,3 from the 36h11 family
     int LEFT = 1;
     int MIDDLE = 2;
     int RIGHT = 3;
@@ -58,7 +53,7 @@ public class SplineTest extends LinearOpMode {
             @Override
             public void onOpened()
             {
-                camera.startStreaming(1280,720, OpenCvCameraRotation.UPRIGHT);
+                camera.startStreaming(800,448, OpenCvCameraRotation.UPRIGHT);
             }
 
             @Override
@@ -152,34 +147,22 @@ public class SplineTest extends LinearOpMode {
         }
 
         /* Actually do something useful */
-        if (tagOfInterest == null || tagOfInterest.id == LEFT) {
-            // insert trajectory code
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
-        } else if (tagOfInterest.id == MIDDLE) {
-            // insert trajectory code
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
-            sleep(20);
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
-        } else if (tagOfInterest.id == RIGHT) {
-            // insert trajectory code
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
-            sleep(20);
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
-            sleep(20);
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
+        if(tagOfInterest == null){
+            //default trajectory here if preferred
+        }else if(tagOfInterest.id == LEFT){
+            //left trajectory
+        }else if(tagOfInterest.id == MIDDLE){
+            //middle trajectory
+        }else{
+            //right trajectory
         }
 
 
         /* You wouldn't have this in your autonomous, this is just to prevent the sample from ending */
-//        while (opModeIsActive()) {sleep(20);}
+        while (opModeIsActive()) {sleep(20);}
     }
 
+    @SuppressLint("DefaultLocale")
     void tagToTelemetry(AprilTagDetection detection)
     {
         telemetry.addLine(String.format("\nDetected tag ID=%d", detection.id));

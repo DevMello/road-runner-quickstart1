@@ -1,26 +1,41 @@
-package org.firstinspires.ftc.teamcode.drive.opmode;
+package org.firstinspires.ftc.teamcode.auton;
+
 
 import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.acmerobotics.roadrunner.trajectory.Trajectory;
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
+import android.annotation.SuppressLint;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import org.checkerframework.checker.signature.qual.IdentifierOrArray;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
-import org.firstinspires.ftc.teamcode.vision.AprilTagDetectionPipeline;
+import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 import org.openftc.apriltag.AprilTagDetection;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
+import org.openftc.easyopencv.OpenCvInternalCamera;
 
 import java.util.ArrayList;
+@TeleOp
+public class LeftCycle1 extends LinearOpMode {
+    enum AutonStates {
+        INIT,
+        PRELOAD,
+        CYCLE,
+        PARK,
+        COMPLETE
+    }
 
-/*
- * This is an example of a more complex path to really test the tuning.
- */
-@Autonomous(group = "drive")
-public class SplineTest extends LinearOpMode {
+    AutonStates currentState = AutonStates.INIT;
+
     OpenCvCamera camera;
     AprilTagDetectionPipeline aprilTagDetectionPipeline;
 
@@ -44,10 +59,21 @@ public class SplineTest extends LinearOpMode {
     int RIGHT = 3;
 
     AprilTagDetection tagOfInterest = null;
+    //DcMotorEx slideLeft, slideRight;
+
+
+    //Robot robot;
+    Pose2d startPose = new Pose2d(-36, 58, Math.toRadians(-90));
 
     @Override
-    public void runOpMode()
-    {
+    public void runOpMode() {
+        //robot = new Robot(hardwareMap, true);
+//        slideLeft = (DcMotorEx) hardwareMap.dcMotor.get("leftSlide");
+//        slideRight = (DcMotorEx) hardwareMap.dcMotor.get("rightSlide");
+
+        SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
+
+
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
         aprilTagDetectionPipeline = new AprilTagDetectionPipeline(tagsize, fx, fy, cx, cy);
@@ -58,7 +84,7 @@ public class SplineTest extends LinearOpMode {
             @Override
             public void onOpened()
             {
-                camera.startStreaming(1280,720, OpenCvCameraRotation.UPRIGHT);
+                camera.startStreaming(800,448, OpenCvCameraRotation.UPRIGHT);
             }
 
             @Override
@@ -72,10 +98,10 @@ public class SplineTest extends LinearOpMode {
 
         /*
          * The INIT-loop:
-         * This REPLACES waitForStart!
+         * This REPLACES waitForStart
          */
-        while (!isStarted() && !isStopRequested())
-        {
+
+        while (!isStarted() && !isStopRequested()) {
             ArrayList<AprilTagDetection> currentDetections = aprilTagDetectionPipeline.getLatestDetections();
 
             if(currentDetections.size() != 0)
@@ -151,35 +177,94 @@ public class SplineTest extends LinearOpMode {
             telemetry.update();
         }
 
+        //robot.slides.launchAsThread(telemetry);
+
+
+
+        TrajectorySequence parkTrajectory = null;
         /* Actually do something useful */
-        if (tagOfInterest == null || tagOfInterest.id == LEFT) {
-            // insert trajectory code
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
-        } else if (tagOfInterest.id == MIDDLE) {
-            // insert trajectory code
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
-            sleep(20);
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
-        } else if (tagOfInterest.id == RIGHT) {
-            // insert trajectory code
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
-            sleep(20);
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
-            sleep(20);
-            gamepad1.rumble(500);
-            gamepad2.rumble(500);
+
+        if(tagOfInterest == null){
+            //default trajectory here if preferred
+        }else if(tagOfInterest.id == LEFT){
+            parkTrajectory = drive.trajectorySequenceBuilder(new Pose2d())
+                    .forward(40)
+                    .turn(Math.toRadians(-230))
+                    .forward(35)
+                    //.strafeLeft(40)
+                    .build();
+
+            //left trajectory
+        }else if(tagOfInterest.id == MIDDLE){
+            parkTrajectory = drive.trajectorySequenceBuilder(new Pose2d())
+                    .forward(40)
+                    .build();
+            //middle trajectory
+
+        }else{
+            parkTrajectory = drive.trajectorySequenceBuilder(new Pose2d())
+                    .forward(40)
+                    .turn(Math.toRadians(230))
+                    .forward(35)
+                    .build();
+
         }
 
+        // Start loop, stops when opmode is stopped or it reaches complete state
+        while (!isStopRequested() && currentState != AutonStates.COMPLETE) {
 
-        /* You wouldn't have this in your autonomous, this is just to prevent the sample from ending */
-//        while (opModeIsActive()) {sleep(20);}
+            switch (currentState) {
+                case INIT:
+                    // some init idk
+                    currentState = AutonStates.PRELOAD;
+                    break;
+                case PRELOAD:
+                    //robot.drive.followTrajectorySequence(toPreloadJunction);
+                    //robot.starterStackPreset(Robot.StarterStack.FIVE);
+                    currentState = AutonStates.CYCLE;
+                    break;
+                case CYCLE:
+                    // CYCLE 1
+                    // Uses special path since it starts from the end of preload
+                    //robot.drive.followTrajectorySequence(preloadToStack);
+                    //robot.claw.toggle();
+                    //robot.slides.runToPosition(-700);
+
+//                    robot.drive.followTrajectorySequence(stackToHighJunction);
+//                    robot.highPreset(false);
+//                    //robot.v4b.setAngle(218);
+//
+//                    //robot.claw.toggle();
+//                    robot.robotOff(true, -290);
+//
+//                    // CYCLES 2 - n
+//                    for (int cycle = 2; cycle <= 4; cycle++) {
+//                        robot.drive.followTrajectorySequence(highJunctionToStack);
+//                        //robot.claw.toggle();
+//                        robot.slides.runToPosition(-700);
+//
+//                        robot.drive.followTrajectorySequence(stackToHighJunction);
+//                        robot.highPreset(false);
+//                        //robot.v4b.setAngle(218);
+//
+//                        //robot.claw.toggle();
+//                        robot.robotOff(true, (-290 - (200 * cycle)));
+//                    }
+                    currentState = AutonStates.PARK;
+                    break;
+                case PARK:
+                    if (parkTrajectory!= null) {
+                        drive.followTrajectorySequence(parkTrajectory);
+                    }
+                    currentState = AutonStates.COMPLETE;
+                    break;
+            }
+        }
+
+        //robot.slides.destroyThreads(telemetry);
     }
 
+    @SuppressLint("DefaultLocale")
     void tagToTelemetry(AprilTagDetection detection)
     {
         telemetry.addLine(String.format("\nDetected tag ID=%d", detection.id));
